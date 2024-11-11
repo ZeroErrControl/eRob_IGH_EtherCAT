@@ -1,0 +1,12 @@
+[
+{
+  "directory": "/home/erobman/test_project/ethercat_project/build",
+  "command": "/usr/bin/c++ -I/usr/local/etherlab/include -g -o CMakeFiles/igh_driver.dir/src/igh_driver.cpp.o -c /home/erobman/test_project/ethercat_project/src/igh_driver.cpp",
+  "file": "/home/erobman/test_project/ethercat_project/src/igh_driver.cpp"
+},
+{
+  "directory": "/home/erobman/test_project/ethercat_project/build",
+  "command": "/usr/bin/c++ -I/usr/local/etherlab/include -g -o CMakeFiles/multieRob.dir/src/multi_eRob.cpp.o -c /home/erobman/test_project/ethercat_project/src/multi_eRob.cpp",
+  "file": "/home/erobman/test_project/ethercat_project/src/multi_eRob.cpp"
+}
+]

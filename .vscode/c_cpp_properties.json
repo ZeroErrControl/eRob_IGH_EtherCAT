@@ -1,0 +1,22 @@
+{
+  "configurations": [
+    {
+      "name": "linux-gcc-x64",
+      "includePath": [
+        "${workspaceFolder}/**",
+        "/usr/local/etherlab/include" // Ensure this path is correct
+  // Add EtherCAT include path if needed
+      ],
+      "compilerPath": "/usr/bin/gcc",
+      "cStandard": "c11",              // Specify C standard
+      "cppStandard": "c++17",          // Specify C++ standard
+      "intelliSenseMode": "linux-gcc-x64",
+      "compilerArgs": [
+        "/usr/local/etherlab/lib",
+        "-lethercat"                    // Link against the EtherCAT library
+        // Add more arguments if needed
+      ]
+    }
+  ],
+  "version": 4
+}
