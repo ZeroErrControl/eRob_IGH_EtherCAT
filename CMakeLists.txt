@@ -28,16 +28,7 @@ target_include_directories(
 target_link_libraries(igh_driver ${ETHERCAT_LIB})
 
 
-add_executable(
-        multieRob
-        src/multi_eRob.cpp)
 
-target_include_directories(
-        multieRob
-        PRIVATE
-        ${ETHERLAB_DIR}/include
-)
-target_link_libraries(multieRob ${ETHERCAT_LIB})
 
 
 

@@ -258,10 +258,9 @@ void ODwrite(ec_master_t* master, uint16_t slavePos, uint16_t index, uint8_t sub
 void initDrive(ec_master_t* master, uint16_t slavePos)
 {
 	/* Mode of operation, CSV */
-	ODwrite(master, slavePos, 0x6060, 0x00, 0x09);
+	ODwrite(master, slavePos, 0x6060, 0x00, 0x09);  // 0x09 for CSV mode
 	/* Reset alarm */
-	ODwrite(master, slavePos, 0x6040, 0x00, 128);
-
+	ODwrite(master, slavePos, 0x6040, 0x00, 0x80);
 }
 
 /*****************************************************************************/
@@ -331,7 +330,23 @@ void stack_prefault(void)
 (((TV).tv_sec - 946684800ULL) * 1000000000ULL + (TV).tv_nsec)
 uint32_t interval_=(uint32_t)(1000000000.0 / 1000);
 
+// Add state definitions
+#define STATE_FAULT              0x0008
+#define STATE_SWITCH_ON_DISABLED 0x0040
+#define STATE_READY_TO_SWITCH_ON 0x0021
+#define STATE_SWITCHED_ON        0x0023
+#define STATE_OPERATION_ENABLED  0x0027
 
+// Add function to get drive state
+uint16_t getDriveState(uint16_t statusWord) {
+    return statusWord & 0x6f; // Mask to get state bits
+}
+
+// Add these control word commands
+#define CONTROL_WORD_SHUTDOWN           0x0006
+#define CONTROL_WORD_SWITCH_ON         0x0007
+#define CONTROL_WORD_ENABLE_OPERATION  0x000F
+#define CONTROL_WORD_FAULT_RESET       0x0080
 
 int main(int argc, char **argv)
 {
@@ -610,7 +625,7 @@ int main(int argc, char **argv)
 	sleepTime = cycleTime;
 	/* Update wakeupTime = current time */
 	clock_gettime(CLOCK_MONOTONIC, &wakeupTime);
-	int step = 0;
+
 
 	while (1)
 	{
@@ -655,33 +670,56 @@ int main(int argc, char **argv)
 		printf("actVel0: %d", actVel0);
 		/* Process the received data */
 		targetPos0 = actPos0 + 5000;
-	if (step<500)
-	{
-		step ++;	/* code */
-	}
+
 	
-		if (step < 100)
-		{
-		/* Write PDOs to the datagram */
-			EC_WRITE_U16  (domain1_pd + controlword, 0x80 );
-		}
-		if (step >=100 && step<200)
-		{
-		/* Write PDOs to the datagram */
-			EC_WRITE_U16  (domain1_pd + controlword, 0x06 );
-		}
-		if (step >=200 && step<300)
-		{
-		/* Write PDOs to the datagram */
-			EC_WRITE_U16  (domain1_pd + controlword, 0x07);
-		}
-		if (step >=300)
-		{
-		/* Write PDOs to the datagram */
-			EC_WRITE_U16  (domain1_pd + controlword, 0x0f );
+		// Read status word
+		uint16_t statusWord = EC_READ_U16(domain1_pd + statusword);
+		uint16_t state = getDriveState(statusWord);
+		uint16_t cw = 0; // 将变量声明移到switch语句之前
+		
+		// State machine for enabling the drive
+		switch(state) {
+			case STATE_FAULT:
+				cw = CONTROL_WORD_FAULT_RESET;
+				printf("Fault state, sending reset command\n");
+				break;
+				
+			case STATE_SWITCH_ON_DISABLED:
+				cw = CONTROL_WORD_SHUTDOWN;
+				printf("Switch on disabled, sending shutdown command\n");
+				break;
+				
+			case STATE_READY_TO_SWITCH_ON:
+				cw = CONTROL_WORD_SWITCH_ON;
+				printf("Ready to switch on, sending switch on command\n");
+				break;
+				
+			case STATE_SWITCHED_ON:
+				cw = CONTROL_WORD_ENABLE_OPERATION;
+				printf("Switched on, sending enable operation command\n");
+				break;
+				
+			case STATE_OPERATION_ENABLED:
+				// CSV mode operation
+				actVel0 = EC_READ_S32(domain1_pd + actual_velocity);
+				
+				// Set constant target velocity
+				EC_WRITE_S32(domain1_pd + target_velocity, 10000);
+				
+				// Keep operation enabled
+				cw = CONTROL_WORD_ENABLE_OPERATION;
+				
+				printf("Velocity: Target=10000, Actual=%d\n", actVel0);
+				break;
+				
+			default:
+				cw = CONTROL_WORD_SHUTDOWN;
+				printf("Unknown state (0x%04x), trying shutdown\n", state);
+				break;
 		}
 
-		EC_WRITE_S32 (domain1_pd + target_position  , target_position);
+		// Write control word after switch statement
+		EC_WRITE_U16(domain1_pd + controlword, cw);
 
 		/********************************************************************************/
 

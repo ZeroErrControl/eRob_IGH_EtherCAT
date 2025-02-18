@@ -1,203 +1,104 @@
-***This is an open-source demo related to the eRob product, provided solely for reference by developers. Please note that issues within the open-source project are independent of the quality of eRob products. Users are advised to exercise caution while using the demo. We are not responsible for any damage caused by improper operations. For any project errors, please raise a query in the Issues section. Collaboration and forks to resolve open-source project issues are welcome.***
+# EtherCAT CSV Mode Motor Control Demo
 
-# IGH EtherCAT (Linux)
----
-## Table of Contents
-1. [EtherCAT Driver ROS2 Stack](#ethercat-driver-ros2-stack)
-2. [Quickstart](#quickstart)
-   - [Installation](#installation)
-   - [Prerequisites](#prerequisites)
----
+## Introduction
+This is a motor control demo program based on IGH EtherCAT Master, demonstrating how to control a servo motor in CSV (Cyclic Synchronous Velocity) mode using EtherCAT communication.
 
-#  IGH EtherCAT (Linux)
----
-#  EtherCAT Driver ROS2 Stack
+## System Requirements
+- Ubuntu 20.04/22.04/24.04
+- IGH EtherCAT Master (v1.5.3)
+- Servo drive supporting CiA402 protocol
 
-EtherCAT provides applications with the capacity of reliable, real-time communication between systems and is therefore a common industrial standard. In order to simplify the development/deployment of new application using EtherCAT modules, this stack allows to combine them with ros2_control. This driver proposes a generic ways to parametrize and assemble Hardware Interfaces based on EtherCAT modules that can be defined using parameter files.
+## Installation
 
-Project GitHub repository: [ethercat_driver_ros2](https://github.com/ICube-Robotics/ethercat_driver_ros2)
-
----
-## Quickstart
-
-### Installation
-
----
-#### Prerequisites
-Before you begin, make sure you have the following:
-- **Ubuntu 20.04\22.04\24.04** installed on your system.
----
-
-#### Installing EtherLab
-
-The proposed development builds upon the IgH EtherCAT Master. Installation steps are summarized here:
-- Verify that you can run unsigned kernel modules
-Etherlab is a kernel module that is not signed by default. To allow the kernel to load unsigned modules, you need to disable secure boot.
-
-**Verify if secure boot is enabled (you need to install ‘’mokutil’’ first):**
-``` bash
-sudo apt-get install mokutil
-mokutil --sb-state
-```
-
-it should print:
-``` bash
-SecureBoot disabled
-```
-
----
-if it prints:
-``` bash
-SecureBoot enabled
-```
-
-
-- Then you need to disable secure boot. To do so:
-
-    - reboot your computer and enter the BIOS settings.
-
-    - In the security tab, disable secure boot.
-
-    - Save and exit.
----
-
-- Install required tools:
-
-``` bash
+### 1. Install Required Tools
+```bash
 sudo apt-get update
 sudo apt-get upgrade
 sudo apt-get install git autoconf libtool pkg-config make build-essential net-tools
 ```
 
-- Setup sources for the EtherCAT Master:
-
-``` bash
+### 2. Install IGH EtherCAT Master
+```bash
 git clone https://gitlab.com/etherlab.org/ethercat.git
 cd ethercat
 git checkout stable-1.5
-sudo rm /usr/bin/ethercat
-sudo rm /etc/init.d/ethercat
-./bootstrap  # to create the configure script
-```
-
-- Configure, build and install libs and kernel modules:
-
-``` bash
-/configure --prefix=/usr/local/etherlab  --disable-8139too --disable-eoe --enable-generic
-
+./bootstrap
+./configure --prefix=/usr/local/etherlab --disable-8139too --disable-eoe --enable-generic
 make all modules
 sudo make modules_install install
 sudo depmod
 ```
 
-Configure system:
-
-``` bash
-$ sudo ln -s /usr/local/etherlab/bin/ethercat /usr/bin/
-$ sudo ln -s /usr/local/etherlab/etc/init.d/ethercat /etc/init.d/ethercat
-$ sudo mkdir -p /etc/sysconfig
-$ sudo cp /usr/local/etherlab/etc/sysconfig/ethercat /etc/sysconfig/ethercat
-```
-
-:::tip
-
-These 4 steps may be needed every time the Linux kernel is updated. Before re-doing the 4 steps, you can try the following lighter steps:
-
-Go into the folder where the EtherCAT project was cloned, from **Step 2 (Setup sources)**, do:
-
-```bash
-cd ethercat
-sudo rm /usr/bin/ethercat /etc/init.d/ethercat
-./bootstrap
-```
-Then complete Step 3 (Configure, build and install…) entirely. From Step 4 (Configure system), run:
-
+### 3. Configure System
 ```bash
 sudo ln -s /usr/local/etherlab/bin/ethercat /usr/bin/
 sudo ln -s /usr/local/etherlab/etc/init.d/ethercat /etc/init.d/ethercat
-```
-:::
-
-- Create a new `udev` rule:
-
-``` bash
-sudo gedit /etc/udev/rules.d/99-EtherCAT.rules
+sudo mkdir -p /etc/sysconfig
+sudo cp /usr/local/etherlab/etc/sysconfig/ethercat /etc/sysconfig/ethercat
 ```
 
-containing:
-
-``` bash
-KERNEL=="EtherCAT[0-9]*", MODE="0666"
+### 4. Network Configuration
+1. Create udev rule:
+```bash
+echo 'KERNEL=="EtherCAT[0-9]*", MODE="0666"' | sudo tee /etc/udev/rules.d/99-EtherCAT.rules
 ```
 
-- Configure the network adapter for EtherCAT:
-
-``` bash
+2. Configure EtherCAT network adapter:
+```bash
 sudo gedit /etc/sysconfig/ethercat
 ```
-In the configuration file specify the mac address of the network card to be used and its driver
-
-``` bash
-MASTER0_DEVICE="ff:ff:ff:ff:ff:ff"  # mac address
+Modify MAC address and driver in the configuration file:
+```
+MASTER0_DEVICE="xx:xx:xx:xx:xx:xx"  # Replace with your network card's MAC address
 DEVICE_MODULES="generic"
 ```
 
-- Now you can start the EtherCAT master:
+## Usage
 
-``` bash 
+### 1. Start EtherCAT Master
+```bash
 sudo /etc/init.d/ethercat start
 ```
-it should print
-``` bash 
-Starting EtherCAT master 1.5.3  done
+
+### 2. Build the Program
+```bash
+git clone https://github.com/igh-robotics/igh_ethercat_master.git
+cd igh_ethercat_master
+mkdir build
+cd build
+cmake ..
+make
 ```
 
-You can check connected slaves:
-``` bash 
+### 3. Run the Program
+```bash
+./igh_driver
+```
+
+### Program Features
+- Automatic state machine transition for slave devices (from INIT to OPERATION ENABLED)
+- In OPERATION ENABLED state, the motor will run at target velocity 10000 (units depend on drive configuration)
+- Real-time display of actual motor velocity and status information
+
+### Important Notes
+1. Ensure EtherCAT master is properly started before running the program
+2. Verify network configuration and slave device detection
+3. Check slave status using:
+```bash
 ethercat slaves
 ```
-It should print information of connected slave device:
 
-``` bash 
-$ <id>  <alias>:<position>  <device_state>  +  <device_name>
-```
+## Safety Precautions
+- Ensure the motor is securely mounted before first run
+- Start with lower velocity values for testing
+- Make sure emergency stop measures are in place
 
-Example:
-``` bash 
-0  0:0  PREOP  +  <device_0_name>
-0  0:1  PREOP  +  <device_1_name>
-```
+## Troubleshooting
+If you encounter issues, check:
+1. EtherCAT master status
+2. Network connection
+3. Slave device status
+4. Program execution permissions (sudo required)
 
-### Building `ethercat_driver_ros2`
-- 1. Install ROS2 packages. The current development is based of `ros2 humble`. Installation steps are described in the [ROS2 Humble Documentation](https://docs.ros.org/en/humble/Installation.html).
-
-- 2. Source your ROS2` environment:
-
-``` bash
-source /opt/ros/humble/setup.bash
-```
-:::tip
-
-The ROS2 environment needs to be sources in every used terminal. 
-If only one distribution of ROS2 is used, it can be added to the ~/.bashrc file.
-
-:::
-
-- 3. Install colcon and its extensions :
-``` bash
-sudo apt install python3-colcon-common-extensions
-```
-
-- 4. Create a new ROS2 workspace:
-``` bash
-mkdir ~/ros2_ws/src
-```
-
-- 5. Pull relevant packages, install dependencies, compile, and source the workspace by using:
-``` bash
-cd ~/ros2_ws
-git clone https://github.com/ICube-Robotics/ethercat_driver_ros2.git src/ethercat_driver_ros2
-rosdep install --ignore-src --from-paths . -y -r
-colcon build --cmake-args -DCMAKE_BUILD_TYPE=Release --symlink-install
-source install/setup.bash
-```
+## License
+This project is open source and provided for reference only. Please use with caution. The author is not responsible for any damages or losses.
