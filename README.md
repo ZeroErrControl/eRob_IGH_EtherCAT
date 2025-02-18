@@ -62,7 +62,7 @@ sudo /etc/init.d/ethercat start
 
 ### 2. Build the Program
 ```bash
-git clone https://github.com/igh-robotics/igh_ethercat_master.git
+git clone https://github.com/ZeroErrControl/eRob_IGH_EtherCAT.git
 cd igh_ethercat_master
 mkdir build
 cd build
