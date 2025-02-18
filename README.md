@@ -63,7 +63,7 @@ sudo /etc/init.d/ethercat start
 ### 2. Build the Program
 ```bash
 git clone https://github.com/ZeroErrControl/eRob_IGH_EtherCAT.git
-cd igh_ethercat_master
+cd eRob_IGH_EtherCAT
 mkdir build
 cd build
 cmake ..
